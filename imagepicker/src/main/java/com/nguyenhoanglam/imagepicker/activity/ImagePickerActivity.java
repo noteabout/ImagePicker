@@ -32,6 +32,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -66,6 +67,7 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
     public static final String INTENT_EXTRA_LIMIT = "limit";
     public static final String INTENT_EXTRA_SHOW_CAMERA = "showCamera";
     public static final String INTENT_EXTRA_MODE = "mode";
+    public static final String INTENT_EXTRA_SHOW_IMAGES = "showImages";
     public static final String INTENT_EXTRA_FOLDER_MODE = "folderMode";
     public static final String INTENT_EXTRA_FOLDER_TITLE = "folderTitle";
     public static final String INTENT_EXTRA_IMAGE_TITLE = "imageTitle";
@@ -81,6 +83,7 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
     private boolean showCamera;
     private int mode;
     private boolean folderMode;
+    private boolean showImages;
     private int limit;
     private String folderTitle, imageTitle;
 
@@ -142,6 +145,13 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
         limit = intent.getIntExtra(ImagePickerActivity.INTENT_EXTRA_LIMIT, Constants.MAX_LIMIT);
         mode = intent.getIntExtra(ImagePickerActivity.INTENT_EXTRA_MODE, ImagePickerActivity.MODE_MULTIPLE);
         folderMode = intent.getBooleanExtra(ImagePickerActivity.INTENT_EXTRA_FOLDER_MODE, false);
+
+        if (intent.hasExtra(INTENT_EXTRA_SHOW_IMAGES)) {
+            showImages = intent.getBooleanExtra(ImagePickerActivity.INTENT_EXTRA_SHOW_IMAGES, true);
+        } else {
+            showImages = true;
+        }
+
 
         if (intent.hasExtra(INTENT_EXTRA_FOLDER_TITLE)) {
             folderTitle = intent.getStringExtra(ImagePickerActivity.INTENT_EXTRA_FOLDER_TITLE);
@@ -625,7 +635,12 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
                 getData();
             }
         };
-        getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, observer);
+
+        if(showImages) {
+            getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, observer);
+        } else {
+            getContentResolver().registerContentObserver(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, false, observer);
+        }
     }
 
     /**
@@ -723,6 +738,13 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
         }
     }
 
+
+    public static String getMimeType(String path) {
+        String extension = path.substring(path.lastIndexOf(".") );
+        String mimeTypeMap = MimeTypeMap.getFileExtensionFromUrl(extension.toLowerCase());
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(mimeTypeMap);
+    }
+
     /**
      * Loading data task
      */
@@ -748,8 +770,9 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
                 return;
             }
 
-            Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection,
-                    null, null, MediaStore.Images.Media.DATE_ADDED);
+            Cursor cursor = showImages ? getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection,
+                    null, null, MediaStore.Video.Media.DATE_ADDED) : getContentResolver().query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, projection,
+                    null, null, MediaStore.Video.Media.DATE_ADDED) ;
 
             if (cursor == null) {
                 message = handler.obtainMessage();
@@ -772,23 +795,43 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
                     String name = cursor.getString(cursor.getColumnIndex(projection[1]));
                     String path = cursor.getString(cursor.getColumnIndex(projection[2]));
                     String bucket = cursor.getString(cursor.getColumnIndex(projection[3]));
+                    String mimeType = getMimeType(path);
 
-                    file = new File(path);
-                    if (file.exists()) {
-                        Image image = new Image(id, name, path, false);
-                        temp.add(image);
+                    if(!showImages){
+                        if(!mimeType.contains("video/quicktime")) {
+                            file = new File(path);
+                            if (file.exists()) {
+                                Image image = new Image(id, name, path, false);
+                                temp.add(image);
 
-                        if (folderMode) {
-                            Folder folder = getFolder(bucket);
-                            if (folder == null) {
-                                folder = new Folder(bucket);
-                                folders.add(folder);
+                                if (folderMode) {
+                                    Folder folder = getFolder(bucket);
+                                    if (folder == null) {
+                                        folder = new Folder(bucket);
+                                        folders.add(folder);
+                                    }
+
+                                    folder.getImages().add(image);
+                                }
                             }
+                        }
+                    } else{
+                        file = new File(path);
+                        if (file.exists()) {
+                            Image image = new Image(id, name, path, false);
+                            temp.add(image);
 
-                            folder.getImages().add(image);
+                            if (folderMode) {
+                                Folder folder = getFolder(bucket);
+                                if (folder == null) {
+                                    folder = new Folder(bucket);
+                                    folders.add(folder);
+                                }
+
+                                folder.getImages().add(image);
+                            }
                         }
                     }
-
                 } while (cursor.moveToPrevious());
             }
             cursor.close();
