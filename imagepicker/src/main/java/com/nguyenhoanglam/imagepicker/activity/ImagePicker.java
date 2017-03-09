@@ -22,7 +22,6 @@ public abstract class ImagePicker {
 
     private int mode;
     private int limit;
-    private boolean showImages;
     private boolean showCamera;
     private String folderTitle;
     private String imageTitle;
@@ -68,7 +67,6 @@ public abstract class ImagePicker {
     public void init(Activity activity) {
         this.mode = ImagePickerActivity.MODE_MULTIPLE;
         this.limit = Constants.MAX_LIMIT;
-        this.showImages = true;
         this.showCamera = true;
         this.folderTitle = activity.getString(R.string.title_folder);
         this.imageTitle = activity.getString(R.string.title_select_image);
@@ -132,11 +130,6 @@ public abstract class ImagePicker {
         return this;
     }
 
-    public ImagePicker showImages(boolean showImages) {
-        this.showImages = showImages;
-        return this;
-    }
-
     public Intent getIntent(Activity activity) {
         Intent intent = new Intent(activity, ImagePickerActivity.class);
         intent.putExtra(ImagePickerActivity.INTENT_EXTRA_MODE, mode);
@@ -146,7 +139,6 @@ public abstract class ImagePicker {
         intent.putExtra(ImagePickerActivity.INTENT_EXTRA_IMAGE_TITLE, imageTitle);
         intent.putExtra(ImagePickerActivity.INTENT_EXTRA_SELECTED_IMAGES, selectedImages);
         intent.putExtra(ImagePickerActivity.INTENT_EXTRA_FOLDER_MODE, folderMode);
-        intent.putExtra(ImagePickerActivity.INTENT_EXTRA_SHOW_IMAGES, showImages);
         intent.putExtra(ImagePickerActivity.INTENT_EXTRA_IMAGE_DIRECTORY, imageDirectory);
         return intent;
     }
