@@ -798,7 +798,7 @@ public class ImagePickerActivity extends AppCompatActivity implements OnImageCli
                     String mimeType = getMimeType(path);
 
                     if(!showImages){
-                        if(!mimeType.contains("video/quicktime")) {
+                        if(!mimeType.contains("video/quicktime") && !mimeType.contains("video/avi")) {
                             file = new File(path);
                             if (file.exists()) {
                                 Image image = new Image(id, name, path, false);
